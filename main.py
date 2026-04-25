@@ -6,14 +6,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 Token = os.getenv("DISCORD_TOKEN")
-ext = "cogs.verification"
+ext = {"cogs.verification", "cogs.welcome"}
 
 class main(commands.Bot):
     def __init__(self, command_prefix: str, intents: discord.Intents):
         super().__init__(command_prefix=command_prefix, intents=intents)
 
     async def setup_hook(self):
-        await self.load_extension(ext)
+        for extension in ext:
+            await self.load_extension(extension)
         await self.tree.sync()
         print("Extension loaded and tree synced!")
 
