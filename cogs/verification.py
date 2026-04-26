@@ -1,41 +1,58 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
-class verify(commands.Cog):
+Database = os.getenv("VERIFY_DB")
+Verfication_emoji = "✅"
+
+class verification(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        super().__init__()
+
 
     @commands.Cog.listener()
-    async def on_member_join(self, member: discord.Member):
-        role_unverified = discord.utils.get(member.guild.roles, name="Unverified")
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        guild = self.bot.get_guild(payload.guild_id)
+        verification_role = discord.utils.get(guild.roles, "Verified")
+        member = guild.get_member(payload.user_id)
 
-        if role_unverified:
-            await member.add_roles(role_unverified)
-
-        for channels in member.guild.text_channels:
-            if channels.name == "verification":
-                await channels.set_permissions(role_unverified, view_channel=True, send_messages=True)
-            else:
-                await channels.set_permissions(role_unverified, view_channel=False)
-
-    @app_commands.command(name="verify", description="Verify yourself")
-    @app_commands.checks.bot_has_permissions(manage_roles=True)
-    async def member_verify(self, interaction: discord.Interaction, member: discord.Member):
-        role_unverified = discord.utils.get(member.guild.roles, name="Unverified")
-        role_verify = discord.utils.get(member.guild.roles, name="Verified")
-
-        if role_verify:
-            member.add_roles(role_verify)
-            member.remove_roles(role_unverified)
+        if payload.emoji != Verfication_emoji:
+            return
         
-        for channels in member.guild.text_channels:
-            if channels.name == "verification":
-                await channels.set_permissions(role_verify, view_channel=False)
-            else:
-                await channels.set_permissions(role_verify, view_channel=True)
+        await member.add_roles(verification_role)
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
+        guild = self.bot.get_guild(payload.guild_id)
+        verification_role = discord.utils.get(guild.roles, "Verified")
+        member = guild.get_member(payload.user_id)
+
+        if payload.emoji == Verfication_emoji:
+            await member.remove_roles(verification_role)
+
+
+    @app_commands.command(name="set_verification_channel", description="Set a verification channel")
+    @app_commands.describe(channel="Select the channel you want to set", message="Type the message you want to send")
+    @app_commands.checks.bot_has_permissions(manage_roles=True)
+    async def set_channel(self, interaction: discord.Interaction, channel: discord.TextChannel, message: str):
+        set_record = self.bot.db.execute(
+            """
+            INSERT INTO verification (guild_id, channel_id, message) VALUES ($1, $2, $3)
+            ON CONFLICT (guild_id)
+            DO UPDATE SET channel_id = $2, message = $3
+            """,
+            interaction.guild_id,
+            channel.id,
+            message
+        )
+        await interaction.response.defer()
+        await interaction.followup.send(f"Channel {channel.mention} has been set with message: {message}")
+        await channel.send(message)
+
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(verify(bot))
+    await bot.add_cog(verification(bot))

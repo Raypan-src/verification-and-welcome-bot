@@ -16,7 +16,9 @@ class welcome_bot(commands.Cog):
             INSERT INTO welcome (guild_id, channel_id, welcome_message) VALUES ($1, $2, $3)
             ON CONFLICT (guild_id)
             DO UPDATE SET channel_id = $2, welcome_message = $3
-            """
+            """,
+            channel.id,
+            message
         )
 
         await interaction.response.send_message(f"Welcome channel set to {channel.mention} with message: {message}", ephemeral=True)
