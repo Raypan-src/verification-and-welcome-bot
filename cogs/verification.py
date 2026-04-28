@@ -27,7 +27,7 @@ class verification(commands.Cog):
             return
 
         row = await self.bot.db.fetchrow("SELECT channel_id FROM verification WHERE guild_id = $1", payload.guild_id)
-        if row is None or payload.channel_id != row["channel_id"]:  # ← add this
+        if row is None or payload.channel_id != row["channel_id"]:
             return
         
         role = discord.utils.get(guild.roles, name="Verified")
