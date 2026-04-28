@@ -25,4 +25,4 @@ class main(commands.Bot):
         print("Bot is ready!")
 
 bot = main(command_prefix="!", intents=discord.Intents.all())
-bot.run(Token)        
+bot.run(Token)
